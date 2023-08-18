@@ -33,13 +33,13 @@ use tracing_subscriber::FmtSubscriber;
 use uuid::Uuid;
 
 mod domain;
+mod infrastructure;
 mod presentation;
 
 #[tokio::main]
 async fn main() {
     presentation::web_api::server::run().await;
 }
-
 
 // // async fn ws_handler(
 // //     ws: WebSocketUpgrade,
@@ -171,5 +171,3 @@ async fn main() {
 // //         file_path: None,
 // //     }
 // // }
-
-

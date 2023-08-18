@@ -1,10 +1,12 @@
-use crate::domain::entities::{
-    package::Package, package::Question, package::QuestionType, package::Round, package::RoundType,
-    package::Topic,
+use crate::{
+    domain::entities::{
+        package::Package, package::Question, package::QuestionType, package::Round,
+        package::RoundType, package::Topic,
+    },
+    infrastructure::repositories,
 };
 use axum::{extract::Path, Json};
 use chrono::Utc;
-use mongodb::{options::ClientOptions, Client};
 use uuid::Uuid;
 
 pub async fn get_packages() -> Json<Vec<Package>> {
@@ -23,29 +25,10 @@ pub async fn get_package(Path(uuid): Path<Uuid>) -> Json<Package> {
 
 pub async fn create_package() -> Json<Package> {
     let uuid = Uuid::new_v4();
-    let mut client_options = ClientOptions::parse("mongodb://localhost:27017")
-        .await
-        .unwrap();
-
-    client_options.app_name = Some(String::from("SI Game"));
-
-    let client = Client::with_options(client_options).unwrap();
-
-    for db_name in client.list_database_names(None, None).await.unwrap() {
-        println!("DB: {}", db_name);
-    }
-
-    let db = client.database("si_game");
-
-    for collection_name in db.list_collection_names(None).await.unwrap() {
-        println!("COLLECTION: {}", collection_name);
-    }
-
-    let collection = db.collection::<Package>("packages");
-
     let package = create_package_obj(uuid);
 
-    collection.insert_one(&package, None).await.unwrap();
+    let conn = repositories::connection::get_connection().await;
+    repositories::packages::create_package(&conn, &package).await;
 
     dbg!("hello");
     Json(package)
