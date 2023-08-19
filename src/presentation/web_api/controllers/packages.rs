@@ -5,7 +5,7 @@ use crate::{
     },
     infrastructure::repositories,
 };
-use axum::{extract::Path, Json};
+use axum::{extract, Json};
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -16,17 +16,14 @@ pub async fn get_packages() -> Json<Vec<Package>> {
     Json(vec![package])
 }
 
-pub async fn get_package(Path(uuid): Path<Uuid>) -> Json<Package> {
+pub async fn get_package(extract::Path(uuid): extract::Path<Uuid>) -> Json<Package> {
     let package = create_package_obj(uuid);
 
     dbg!("hello");
     Json(package)
 }
 
-pub async fn create_package() -> Json<Package> {
-    let uuid = Uuid::new_v4();
-    let package = create_package_obj(uuid);
-
+pub async fn create_package(extract::Json(package): extract::Json<Package>) -> Json<Package> {
     let conn = repositories::connection::get_connection().await;
     repositories::packages::create_package(&conn, &package).await;
 
