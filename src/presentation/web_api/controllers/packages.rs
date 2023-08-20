@@ -1,34 +1,53 @@
 use crate::{
     domain::entities::{
-        package::Package, package::Question, package::QuestionType, package::Round,
-        package::RoundType, package::Topic,
+        package::Package,
+        package::Question,
+        package::QuestionType,
+        package::RoundType,
+        package::Topic,
+        package::{self, Round},
     },
     infrastructure::repositories,
 };
-use axum::{extract, Json};
+use axum::{extract, http::StatusCode, response::IntoResponse, Json};
 use chrono::Utc;
 use uuid::Uuid;
 
-pub async fn get_packages() -> Json<Vec<Package>> {
-    let package = create_package_obj(Uuid::new_v4());
+pub async fn get_packages() -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    let conn = repositories::connection::get_connection().await;
+    let packages = repositories::packages::get_packages(&conn).await;
 
-    dbg!("hello");
-    Json(vec![package])
+    Ok((StatusCode::OK, Json(packages)))
 }
 
-pub async fn get_package(extract::Path(uuid): extract::Path<Uuid>) -> Json<Package> {
-    let package = create_package_obj(uuid);
+pub async fn get_package(
+    extract::Path(uuid): extract::Path<Uuid>,
+) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
+    let conn = repositories::connection::get_connection().await;
 
-    dbg!("hello");
-    Json(package)
+    let package = repositories::packages::get_package(&conn, uuid).await;
+    dbg!(package);
+
+    if let Some(package) = repositories::packages::get_package(&conn, uuid).await {
+        dbg!(package);
+        return Ok((StatusCode::OK, ()));
+    }
+
+    Err((
+        StatusCode::NOT_FOUND,
+        Json(serde_json::json!({
+            "message": format!("Package with UUID: {} not found", uuid)
+        })),
+    ))
 }
 
-pub async fn create_package(extract::Json(package): extract::Json<Package>) -> Json<Package> {
+pub async fn create_package(
+    extract::Json(package): extract::Json<Package>,
+) -> Result<impl IntoResponse, (StatusCode, ())> {
     let conn = repositories::connection::get_connection().await;
     repositories::packages::create_package(&conn, &package).await;
 
-    dbg!("hello");
-    Json(package)
+    Ok((StatusCode::NO_CONTENT, ()))
 }
 
 fn create_package_obj(uuid: Uuid) -> Package {
